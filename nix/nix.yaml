@@ -1,0 +1,53 @@
+# syntax=docker/sandbox-kit:3
+schemaVersion: "3"
+displayName: Nix
+description: Single-user Nix with nix-command and flakes enabled, for any workload
+sourceUrl: https://github.com/NixOS/nix
+licenses: [LGPL-2.1-or-later]
+
+kind: mixin
+
+# Must match the image tag in nix.dockerfile; the build checks the version.
+provides: ["nix@2.35.2"]
+
+capabilities:
+  - type: com.docker.sandbox/network-policy@2
+    config:
+      runtime:
+        allow:
+          # Binary cache, the flake registry and nixpkgs channel tarballs, and
+          # what `github:` flake inputs fetch. Reads only.
+          - hosts:
+              - cache.nixos.org
+              - channels.nixos.org
+              - releases.nixos.org
+              - github.com
+              - api.github.com
+              - codeload.github.com
+              - raw.githubusercontent.com
+            methods: [GET, HEAD]
+          # Fetching a `git+https://github.com/...` input needs this POST. It
+          # does not allow pushing.
+          - hosts: [github.com]
+            methods: [POST]
+            paths: ["/**/git-upload-pack"]
+
+  # @1 rather than @2: the upstream kit reports sbx v0.49.1 rejecting @2, and
+  # the two versions cannot be composed together.
+  - type: com.docker.sandbox/agent-context@1
+    config:
+      content: |
+        # Nix
+
+        Nix is installed in single-user mode (no daemon) with `nix-command` and
+        flakes enabled.
+
+        - In a flake project, run commands with `nix develop -c <command>`.
+        - Run a package once with `nix run nixpkgs#<package>` or
+          `nix shell nixpkgs#<package> -c <command>`.
+        - Never run `nix develop` or `nix shell` without `-c`: they open an
+          interactive shell that hangs in a non-interactive context.
+        - Nix only sees files that git tracks, so `git add` new files before
+          evaluating a flake.
+        - Only cache.nixos.org, nixos.org channels and GitHub are allowed by
+          this kit. Other hosts must be allowed by the user.
