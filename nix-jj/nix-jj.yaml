@@ -1,0 +1,37 @@
+# syntax=docker/sandbox-kit:3
+schemaVersion: "3"
+kind: set
+displayName: Nix and Jujutsu
+description: The nix and jj kits in one reference, with pushing to GitHub denied
+sourceUrl: https://github.com/schoderer/sbx_kits
+licenses: [MIT]
+
+args:
+  registry:
+    default: ghcr.io/schoderer
+    pattern: '^[a-z0-9][a-z0-9._/:-]*$'
+    description: Registry namespace the listed kits were pushed to
+    buildArg: KIT_REGISTRY
+  tag:
+    default: latest
+    pattern: '^[A-Za-z0-9_][A-Za-z0-9._-]*$'
+    description: Tag of the listed kits
+    buildArg: KIT_TAG
+
+kits:
+  - ref: ${{ kit.args.registry }}/sbx-kit-nix:${{ kit.args.tag }}
+  - ref: ${{ kit.args.registry }}/sbx-kit-jj:${{ kit.args.tag }}
+
+# Deny wins over any allow, including those of the workload and other mixins.
+capabilities:
+  - type: com.docker.sandbox/network-policy@2
+    config:
+      runtime:
+        deny:
+          # git and jj pushes over HTTPS.
+          - hosts: [github.com]
+            methods: [POST]
+            paths: ["/**/git-receive-pack"]
+          # Changing a repository through the API.
+          - hosts: [api.github.com]
+            methods: [POST, PUT, PATCH, DELETE]

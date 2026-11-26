@@ -5,6 +5,7 @@ Docker Sandboxes (`sbx`) kits, manifest **v3**. One directory per kit:
 
 ## Preferences
 
+- Use `jj`, not `git`, for version control.
 - Keep kits minimal and mixins usable on any workload. Add no pins, volumes or
   extras that were not asked for.
 

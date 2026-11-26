@@ -1,0 +1,42 @@
+# syntax=docker/sandbox-kit:3
+schemaVersion: "3"
+displayName: Jujutsu
+description: The jj version control system, using your Git identity
+sourceUrl: https://github.com/jj-vcs/jj
+licenses: [Apache-2.0]
+
+kind: mixin
+
+# Must match JJ_VERSION in jj.dockerfile.
+provides: ["jj@0.47.1"]
+
+capabilities:
+  - type: com.docker.sandbox/git-identity@1
+    optional: true
+    description: Attribute jj changes to your Git identity
+
+  # git-identity only sets Git's config, which jj does not read for its author.
+  - type: com.docker.sandbox/lifecycle@1
+    config:
+      startup:
+        - command:
+            - sh
+            - -c
+            - |
+              for key in name email; do
+                value=$(git config --global --get "user.$key") || continue
+                jj config set --user "user.$key" "$value"
+              done
+          description: Copy the Git identity into the jj config
+
+  - type: com.docker.sandbox/agent-context@1
+    config:
+      content: |
+        # Jujutsu
+
+        `jj` is installed. In a repository with a `.jj` directory, use `jj`
+        instead of `git`.
+
+        - Pass messages with `-m` (`jj describe -m`, `jj commit -m`) so no
+          editor opens.
+        - Never push. The user pushes from their own machine.
